@@ -5,11 +5,11 @@ allprojects {
     }
 }
 
-val newBuildDir: Directory =
-    rootProject.layout.buildDirectory
-        .dir("../../build")
-        .get()
-rootProject.layout.buildDirectory.value(newBuildDir)
+// Keep Gradle outputs outside OneDrive to prevent sync/file-lock conflicts.
+val localBuildRoot = System.getenv("LOCALAPPDATA")
+    ?: (System.getProperty("user.home") + "/AppData/Local")
+rootProject.layout.buildDirectory.set(file(localBuildRoot + "/SatisBuild"))
+val newBuildDir: Directory = rootProject.layout.buildDirectory.get()
 
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)

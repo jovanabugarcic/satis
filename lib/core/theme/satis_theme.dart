@@ -17,8 +17,10 @@ abstract final class SatisTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: SatisPalette.background,
+      fontFamily: 'Instrument Sans',
       textTheme: const TextTheme(
         headlineSmall: TextStyle(//headlineSmall je stil za naslov
+          fontFamily: 'Newsreader',
           color: SatisPalette.ink,
           fontSize: 24,
           fontWeight: FontWeight.w600,

@@ -104,7 +104,7 @@ class _Metric extends StatelessWidget {//prikazuje metriku sa vrednošću i labe
       child: Column(//za prikazivanje vrednosti i labela u metriki
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 21)),
+          Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontFamily: 'Geist Mono', fontSize: 21)),
           const SizedBox(height: 3),
           Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
