@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/theme/satis_theme.dart';
-import 'navigation/satis_shell.dart';
+import 'screens/guest_welcome_screen.dart';
 
 class SatisApp extends StatelessWidget {
   const SatisApp({super.key}); // konstruktor super.keyomogucava flutteru da identifikuje widget u stablu aplikacija
@@ -11,7 +11,7 @@ class SatisApp extends StatelessWidget {
       title: 'Satis',
       debugShowCheckedModeBanner: false,//uklanja debug baner u gornjem desnom uglu aplikacije
       theme: SatisTheme.light,
-      home: const SatisShell(),
+      home: const GuestWelcomeScreen(),
     );
   }
 }
