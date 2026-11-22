@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/satis_palette.dart';
+import '../screens/notifications_screen.dart';
 import '../screens/obligations_screen.dart';
 import '../screens/student_dashboard_screen.dart';
 
@@ -38,11 +38,7 @@ class _SatisShellState extends State<SatisShell> {
     final pages = [ //spisak ekrana
       const StudentDashboardScreen(),
       const ObligationsScreen(),
-      const _PlaceholderPage(
-        title: 'Obaveštenja',
-        description: 'Ovde će se prikazivati važna obaveštenja.',
-        icon: Icons.notifications_outlined,
-      ),
+      const NotificationsScreen(),
     ];
 
     return Scaffold(//Vraća osnovni Material raspored ekrana
@@ -58,53 +54,6 @@ class _SatisShellState extends State<SatisShell> {
           });
         },
         destinations: _destinations,
-      ),
-    );
-  }
-}
-
-class _PlaceholderPage extends StatelessWidget {
-  const _PlaceholderPage({
-    required this.title,
-    required this.description,
-    required this.icon,
-  });
-
-  final String title;
-  final String description;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Scaffold(
-      backgroundColor: SatisPalette.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: textTheme.headlineSmall),
-              const Spacer(),
-              Center(
-                child: Column(
-                  children: [
-                    Icon(icon, size: 40, color: SatisPalette.mutedText),
-                    const SizedBox(height: 16),
-                    Text(
-                      description,
-                      textAlign: TextAlign.center,
-                      style: textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-            ],
-          ),
-        ),
       ),
     );
   }
