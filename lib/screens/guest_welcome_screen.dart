@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/satis_palette.dart';
 import '../navigation/satis_shell.dart';
+import 'auth_form_screen.dart';
 
 class GuestWelcomeScreen extends StatelessWidget {
   const GuestWelcomeScreen({super.key});
@@ -14,10 +15,10 @@ class GuestWelcomeScreen extends StatelessWidget {
     );
   }
 
-  void _showComingSoon(BuildContext context, String featureName) { 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opcija $featureName biće dostupna.'),
+  void _openAuthForm(BuildContext context, {required bool isRegistration}) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => AuthFormScreen(isRegistration: isRegistration),
       ),
     );
   }
@@ -81,7 +82,7 @@ class GuestWelcomeScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () => _showComingSoon(context, 'Prijava'),
+                  onPressed: () => _openAuthForm(context, isRegistration: false),
                   child: const Text('Prijavi se'),
                 ),
               ),
@@ -89,7 +90,7 @@ class GuestWelcomeScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () => _showComingSoon(context, 'Registracija'),
+                  onPressed: () => _openAuthForm(context, isRegistration: true),
                   child: const Text('Napravi nalog'),
                 ),
               ),
