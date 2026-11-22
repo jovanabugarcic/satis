@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/satis_palette.dart';
+import '../screens/obligations_screen.dart';
 import '../screens/student_dashboard_screen.dart';
 
 class SatisShell extends StatefulWidget {
@@ -36,11 +37,7 @@ class _SatisShellState extends State<SatisShell> {
   //a kontekst (context) sadrži informacije o lokaciji widgeta u stablu widgeta, kao i informacije o temi, jeziku i drugim aspektima okruženja aplikacije.
     final pages = [ //spisak ekrana
       const StudentDashboardScreen(),
-      const _PlaceholderPage(
-        title: 'Obaveze',
-        description: 'Ovde ćeš pratiti svoje obaveze i rokove.',
-        icon: Icons.checklist_outlined,
-      ),
+      const ObligationsScreen(),
       const _PlaceholderPage(
         title: 'Obaveštenja',
         description: 'Ovde će se prikazivati važna obaveštenja.',
