@@ -78,6 +78,32 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
     });
   }
 
+  Future<void> _confirmDeleteObligation(_Obligation obligation) async { //metoda za brisanje obaveze
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Obrisati obavezu?'),
+        content: Text('Obaveza „${obligation.title}“ biće uklonjena sa liste.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Otkaži'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Obriši'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true || !mounted) return; //!mounted — ekran je u međuvremenu zatvoren ili uklonjen iz aplikacije
+
+    setState(() {
+      _obligations.remove(obligation); //uklanja obavezu iz liste i ekran se ponovo renderuje
+    });
+  }
+
   Future<void> _showAddObligationDialog() async {
     final formKey = GlobalKey<FormState>(); //proverava da li su uneti podaci validni
     final titleController = TextEditingController(); //cuva tekst koji je unet u polje za naziv obaveze
@@ -290,6 +316,7 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
                 obligation: obligation,
                 onChanged: (isCompleted) =>
                     _setCompleted(obligation, isCompleted),
+                onDelete: () => _confirmDeleteObligation(obligation),
               ),
               const SizedBox(height: 10),
             ],
@@ -304,10 +331,12 @@ class _ObligationCard extends StatelessWidget {
   const _ObligationCard({
     required this.obligation,
     required this.onChanged,
+    required this.onDelete,
   });
 
   final _Obligation obligation;
   final ValueChanged<bool> onChanged;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -349,6 +378,12 @@ class _ObligationCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            onPressed: onDelete,
+            tooltip: 'Obriši obavezu',
+            icon: const Icon(Icons.delete_outline),
+            color: SatisPalette.mutedText,
           ),
         ],
       ),
