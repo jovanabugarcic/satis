@@ -9,7 +9,15 @@ class ObligationsScreen extends StatefulWidget { //stanje se menja po oznacavanj
   State<ObligationsScreen> createState() => _ObligationsScreenState();
 }
 
-class _ObligationsScreenState extends State<ObligationsScreen> {
+class _ObligationsScreenState extends State<ObligationsScreen> { 
+  static const _categories = [
+    'Pisanje',
+    'Literatura',
+    'Mentor',
+    'Rezultati',
+    'Odbrana',
+  ];
+
   final List<_Obligation> _obligations = [ //lista obaveza koje se prikazuju na ekranu
     _Obligation(
       title: 'Dovršiti pregled literature',
@@ -43,11 +51,141 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
     });
   }
 
+  Future<void> _showAddObligationDialog() async {
+    final formKey = GlobalKey<FormState>(); //proverava da li su uneti podaci validni
+    final titleController = TextEditingController(); //cuva tekst koji je unet u polje za naziv obaveze
+    var selectedCategory = _categories.first; //inicijalno je izabrana prva kategorija
+    var selectedDate = DateTime.now().add(const Duration(days: 7)); //inicijalno je izabran datum koji je 7 dana od danas
+
+    final newObligation = await showDialog<_Obligation>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Nova obaveza'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: titleController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Naziv obaveze',
+                    prefixIcon: Icon(Icons.edit_outlined),
+                  ),
+                  validator: (value) { //proverava da li je unet naziv obaveze, ako nije vraca poruku o gresci
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Unesi naziv obaveze.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>( //prikazuje padajuci meni sa kategorijama
+                  initialValue: selectedCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'Kategorija',
+                    prefixIcon: Icon(Icons.folder_outlined),
+                  ),
+                  items: _categories
+                      .map(
+                        (category) => DropdownMenuItem( //pravi dropdown item za svaku kategoriju
+                          value: category,
+                          child: Text(category),
+                        ),
+                      )
+                      .toList(), //pravi listu DropdownMenuItem widgeta za svaku kategoriju
+                  onChanged: (category) {
+                    if (category == null) return;
+                    setDialogState(() {
+                      selectedCategory = category;
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime(2035),
+                      );
+                      if (date == null) return;
+                      setDialogState(() {
+                        selectedDate = date;
+                      });
+                    },
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text('Rok: ${_formatDate(selectedDate)}'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Otkaži'),
+            ),
+            FilledButton(
+              onPressed: () { //proverava da li su uneti podaci validni, ako jesu zatvara dijalog i vraca novu obavezu, ako nisu ne radi nista
+                if (!(formKey.currentState?.validate() ?? false)) return;
+                Navigator.of(dialogContext).pop(
+                  _Obligation(
+                    title: titleController.text.trim(),
+                    category: selectedCategory,
+                    dueDate: _formatDate(selectedDate),
+                  ),
+                );
+              },
+              child: const Text('Dodaj'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    titleController.dispose(); //oslobadja resurse koje koristi TextEditingController
+    if (newObligation == null || !mounted) return;
+
+    setState(() {//dodaje novu obavezu u listu i ekran se ponovo renderuje
+      _obligations.insert(0, newObligation);
+    });
+  }
+
+  String _formatDate(DateTime date) {
+    const monthNames = [
+      'januar',
+      'februar',
+      'mart',
+      'april',
+      'maj',
+      'jun',
+      'jul',
+      'avgust',
+      'septembar',
+      'oktobar',
+      'novembar',
+      'decembar',
+    ];
+
+    return '${date.day}. ${monthNames[date.month - 1]}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddObligationDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('Nova obaveza'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
