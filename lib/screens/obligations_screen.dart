@@ -4,6 +4,25 @@ import '../core/theme/satis_palette.dart';
 
 enum _ObligationFilter { all, active, completed }
 
+String _formatDate(DateTime date) {
+  const monthNames = [
+    'januar',
+    'februar',
+    'mart',
+    'april',
+    'maj',
+    'jun',
+    'jul',
+    'avgust',
+    'septembar',
+    'oktobar',
+    'novembar',
+    'decembar',
+  ];
+
+  return '${date.day}. ${monthNames[date.month - 1]}';
+}
+
 class ObligationsScreen extends StatefulWidget { //stanje se menja po oznacavanju obaveza
   const ObligationsScreen({super.key});
 
@@ -26,23 +45,23 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
     _Obligation(
       title: 'Dovršiti pregled literature',
       category: 'Literatura',
-      dueDate: '25. novembar',
+      dueDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 1))),
     ),
     _Obligation(
       title: 'Poslati metodologiju mentoru',
       category: 'Mentor',
-      dueDate: '24. novembar',
+      dueDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 3))),
     ),
     _Obligation(
       title: 'Uneti komentare za rezultate',
       category: 'Rezultati',
-      dueDate: '28. novembar',
+      dueDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 7))),
       isCompleted: true,
     ),
     _Obligation(
       title: 'Pripremiti plan odbrane',
       category: 'Odbrana',
-      dueDate: '5. decembar',
+      dueDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 14))),
     ),
   ];
 
@@ -104,17 +123,20 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
     });
   }
 
-  Future<void> _showAddObligationDialog() async {
+  Future<void> _showObligationDialog({_Obligation? obligation}) async { //metoda za prikaz dijaloga za dodavanje ili izmenu obaveze
+    final isEditing = obligation != null;//proverava da li je u pitanju izmena ili dodavanje nove obaveze
     final formKey = GlobalKey<FormState>(); //proverava da li su uneti podaci validni
-    final titleController = TextEditingController(); //cuva tekst koji je unet u polje za naziv obaveze
-    var selectedCategory = _categories.first; //inicijalno je izabrana prva kategorija
-    var selectedDate = DateTime.now().add(const Duration(days: 7)); //inicijalno je izabran datum koji je 7 dana od danas
+    final titleController = TextEditingController(text: obligation?.title ?? '');
+    var selectedCategory = obligation?.category ?? _categories.first;
+    var selectedDate = DateUtils.dateOnly(//ako je u pitanju izmena obaveze, inicijalno je izabran datum koji je vec unet, ako je u pitanju nova obaveza, inicijalno je izabran datum za 7 dana unapred
+      obligation?.dueDate ?? DateTime.now().add(const Duration(days: 7)),
+    );
 
-    final newObligation = await showDialog<_Obligation>(
+    final changedObligation = await showDialog<_Obligation>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Nova obaveza'),
+          title: Text(isEditing ? 'Izmeni obavezu' : 'Nova obaveza'),
           content: Form(
             key: formKey,
             child: Column(
@@ -164,7 +186,9 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
                       final date = await showDatePicker(
                         context: context,
                         initialDate: selectedDate,
-                        firstDate: DateTime.now(),
+                        firstDate: selectedDate.isBefore(DateTime.now())
+                            ? selectedDate
+                            : DateUtils.dateOnly(DateTime.now()),
                         lastDate: DateTime(2035),
                       );
                       if (date == null) return;
@@ -191,11 +215,12 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
                   _Obligation(
                     title: titleController.text.trim(),
                     category: selectedCategory,
-                    dueDate: _formatDate(selectedDate),
+                    dueDate: selectedDate,
+                    isCompleted: obligation?.isCompleted ?? false,
                   ),
                 );
               },
-              child: const Text('Dodaj'),
+              child: Text(isEditing ? 'Sačuvaj' : 'Dodaj'),
             ),
           ],
         ),
@@ -203,30 +228,16 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
     );
 
     titleController.dispose(); //oslobadja resurse koje koristi TextEditingController
-    if (newObligation == null || !mounted) return;
+    if (changedObligation == null || !mounted) return;
 
-    setState(() {//dodaje novu obavezu u listu i ekran se ponovo renderuje
-      _obligations.insert(0, newObligation);
+    setState(() {
+      if (obligation == null) {
+        _obligations.insert(0, changedObligation);
+      } else {
+        final index = _obligations.indexOf(obligation);
+        if (index != -1) _obligations[index] = changedObligation;
+      }
     });
-  }
-
-  String _formatDate(DateTime date) {
-    const monthNames = [
-      'januar',
-      'februar',
-      'mart',
-      'april',
-      'maj',
-      'jun',
-      'jul',
-      'avgust',
-      'septembar',
-      'oktobar',
-      'novembar',
-      'decembar',
-    ];
-
-    return '${date.day}. ${monthNames[date.month - 1]}';
   }
 
   @override
@@ -236,7 +247,7 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddObligationDialog,
+        onPressed: () => _showObligationDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Nova obaveza'),
       ),
@@ -316,6 +327,7 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
                 obligation: obligation,
                 onChanged: (isCompleted) =>
                     _setCompleted(obligation, isCompleted),
+                onEdit: () => _showObligationDialog(obligation: obligation),
                 onDelete: () => _confirmDeleteObligation(obligation),
               ),
               const SizedBox(height: 10),
@@ -331,11 +343,13 @@ class _ObligationCard extends StatelessWidget {
   const _ObligationCard({
     required this.obligation,
     required this.onChanged,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final _Obligation obligation;
   final ValueChanged<bool> onChanged;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -373,11 +387,17 @@ class _ObligationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${obligation.category} · Rok ${obligation.dueDate}',
+                  '${obligation.category} · Rok ${_formatDate(obligation.dueDate)}',
                   style: textTheme.bodySmall,
                 ),
               ],
             ),
+          ),
+          IconButton(
+            onPressed: onEdit,
+            tooltip: 'Izmeni obavezu',
+            icon: const Icon(Icons.edit_outlined),
+            color: SatisPalette.mutedText,
           ),
           IconButton(
             onPressed: onDelete,
@@ -401,6 +421,6 @@ class _Obligation {
 
   final String title;
   final String category;
-  final String dueDate;
+  final DateTime dueDate;
   bool isCompleted;
 }
