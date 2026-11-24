@@ -23,6 +23,32 @@ String _formatDate(DateTime date) {
   return '${date.day}. ${monthNames[date.month - 1]}';
 }
 
+int _daysUntilDue(DateTime dueDate) => DateUtils.dateOnly(dueDate)
+    .difference(DateUtils.dateOnly(DateTime.now()))//zanemaruje vreme i računa razliku u danima između datuma dospeća i trenutnog datuma, vraća broj dana do dospeća, može biti negativan ako je rok prošao
+    .inDays;
+
+String _deadlineLabel(DateTime dueDate, {required bool isCompleted}) {//prikazuje tekstualni opis roka, zavisno od toga da li je obaveza završena ili koliko dana je preostalo do roka
+  if (isCompleted) return 'Završeno';
+
+  final days = _daysUntilDue(dueDate);
+  if (days < 0) {
+    final lateDays = -days;
+    return lateDays == 1 ? 'Kasni 1 dan' : 'Kasni $lateDays dana';
+  }
+  if (days == 0) return 'Rok je danas';
+  if (days == 1) return 'Rok je sutra';
+  return 'Rok za $days dana';
+}
+
+Color _deadlineColor(DateTime dueDate, {required bool isCompleted}) {
+  if (isCompleted) return SatisPalette.closedText;
+
+  final days = _daysUntilDue(dueDate);
+  if (days < 0) return const Color(0xFFB3261E);
+  if (days <= 2) return SatisPalette.apricot;
+  return SatisPalette.mutedText;
+}
+
 class ObligationsScreen extends StatefulWidget { //stanje se menja po oznacavanju obaveza
   const ObligationsScreen({super.key});
 
@@ -408,6 +434,14 @@ class _ObligationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final isCompleted = obligation.isCompleted;
+    final deadlineLabel = _deadlineLabel(
+      obligation.dueDate,
+      isCompleted: isCompleted,
+    );
+    final deadlineColor = _deadlineColor(
+      obligation.dueDate,
+      isCompleted: isCompleted,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -441,6 +475,14 @@ class _ObligationCard extends StatelessWidget {
                 Text(
                   '${obligation.category} · Rok ${_formatDate(obligation.dueDate)}',
                   style: textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  deadlineLabel,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: deadlineColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
