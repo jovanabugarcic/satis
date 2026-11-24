@@ -123,119 +123,25 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
     });
   }
 
-  Future<void> _showObligationDialog({_Obligation? obligation}) async { //metoda za prikaz dijaloga za dodavanje ili izmenu obaveze
-    final isEditing = obligation != null;//proverava da li je u pitanju izmena ili dodavanje nove obaveze
-    final formKey = GlobalKey<FormState>(); //proverava da li su uneti podaci validni
-    final titleController = TextEditingController(text: obligation?.title ?? '');
-    var selectedCategory = obligation?.category ?? _categories.first;
-    var selectedDate = DateUtils.dateOnly(//ako je u pitanju izmena obaveze, inicijalno je izabran datum koji je vec unet, ako je u pitanju nova obaveza, inicijalno je izabran datum za 7 dana unapred
-      obligation?.dueDate ?? DateTime.now().add(const Duration(days: 7)),
-    );
-
+  Future<void> _showObligationDialog({_Obligation? obligation}) async { //Future<void> znači da metoda obavlja posao koji traje neko vreme, ali na kraju ne vraća vrednost pozivaocu.
     final changedObligation = await showDialog<_Obligation>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(isEditing ? 'Izmeni obavezu' : 'Nova obaveza'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: titleController,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Naziv obaveze',
-                    prefixIcon: Icon(Icons.edit_outlined),
-                  ),
-                  validator: (value) { //proverava da li je unet naziv obaveze, ako nije vraca poruku o gresci
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Unesi naziv obaveze.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>( //prikazuje padajuci meni sa kategorijama
-                  initialValue: selectedCategory,
-                  decoration: const InputDecoration(
-                    labelText: 'Kategorija',
-                    prefixIcon: Icon(Icons.folder_outlined),
-                  ),
-                  items: _categories
-                      .map(
-                        (category) => DropdownMenuItem( //pravi dropdown item za svaku kategoriju
-                          value: category,
-                          child: Text(category),
-                        ),
-                      )
-                      .toList(), //pravi listu DropdownMenuItem widgeta za svaku kategoriju
-                  onChanged: (category) {
-                    if (category == null) return;
-                    setDialogState(() {
-                      selectedCategory = category;
-                    });
-                  },
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate: selectedDate.isBefore(DateTime.now())
-                            ? selectedDate
-                            : DateUtils.dateOnly(DateTime.now()),
-                        lastDate: DateTime(2035),
-                      );
-                      if (date == null) return;
-                      setDialogState(() {
-                        selectedDate = date;
-                      });
-                    },
-                    icon: const Icon(Icons.calendar_month_outlined),
-                    label: Text('Rok: ${_formatDate(selectedDate)}'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Otkaži'),
-            ),
-            FilledButton(
-              onPressed: () { //proverava da li su uneti podaci validni, ako jesu zatvara dijalog i vraca novu obavezu, ako nisu ne radi nista
-                if (!(formKey.currentState?.validate() ?? false)) return;
-                Navigator.of(dialogContext).pop(
-                  _Obligation(
-                    title: titleController.text.trim(),
-                    category: selectedCategory,
-                    dueDate: selectedDate,
-                    isCompleted: obligation?.isCompleted ?? false,
-                  ),
-                );
-              },
-              child: Text(isEditing ? 'Sačuvaj' : 'Dodaj'),
-            ),
-          ],
-        ),
+      builder: (context) => _ObligationFormDialog(
+        categories: _categories,
+        obligation: obligation,
       ),
     );
 
-    titleController.dispose(); //oslobadja resurse koje koristi TextEditingController
     if (changedObligation == null || !mounted) return;
 
     setState(() {
       if (obligation == null) {
-        _obligations.insert(0, changedObligation);
+        _obligations.insert(0, changedObligation);//pocetak liste
       } else {
-        final index = _obligations.indexOf(obligation);
-        if (index != -1) _obligations[index] = changedObligation;
+        final index = _obligations.indexOf(obligation); //nalazi indeks obaveze koja je izmenjena u listi obaveza, i zamenjuje je novom obavezom
+        if (index != -1) { //proverava da li je obaveza i dalje u listi, jer je mogla biti obrisana dok je dijalog bio otvoren
+          _obligations[index] = changedObligation;
+        }
       }
     });
   }
@@ -335,6 +241,152 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ObligationFormDialog extends StatefulWidget {
+  const _ObligationFormDialog({
+    required this.categories,
+    this.obligation,
+  });
+
+  final List<String> categories;
+  final _Obligation? obligation;
+
+  @override
+  State<_ObligationFormDialog> createState() => _ObligationFormDialogState();
+}
+
+class _ObligationFormDialogState extends State<_ObligationFormDialog> {
+  final _formKey = GlobalKey<FormState>();//kontroler forme, koristi se za validaciju i cuvanje stanja forme
+  late final TextEditingController _titleController;//kontroler teksta za naziv obaveze, koristi se za čitanje i postavljanje vrednosti u polju za unos teksta
+  late String _selectedCategory;
+  late DateTime _selectedDate;
+
+  bool get _isEditing => widget.obligation != null;
+
+  @override
+  void initState() { //postavlja pocetne vrednosti za kontroler teksta, izabranu kategoriju i datum, na osnovu prosledjene obaveze ili podrazumevanih vrednosti
+    super.initState();
+    _titleController = TextEditingController(
+      text: widget.obligation?.title ?? '',
+    );
+    _selectedCategory = widget.obligation?.category ?? widget.categories.first;
+    _selectedDate = DateUtils.dateOnly(
+      widget.obligation?.dueDate ?? DateTime.now().add(const Duration(days: 7)),
+    );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  void _cancel() {
+    FocusScope.of(context).unfocus();//unfocus() sklanja fokus sa polja i pokreće zatvaranje tastature
+    Navigator.of(context).pop();// Navigator.pop() zatvara dijalog bez rezultata, pa prethodna metoda dobija null
+  } 
+  
+
+  void _save() {
+    if (!(_formKey.currentState?.validate() ?? false)) return; //provera naziva obaveze
+
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).pop(
+      _Obligation(
+        title: _titleController.text.trim(),
+        category: _selectedCategory,
+        dueDate: _selectedDate,
+        isCompleted: widget.obligation?.isCompleted ?? false,
+      ),
+    );
+  }
+
+  Future<void> _chooseDate() async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: _selectedDate.isBefore(today) ? _selectedDate : today,
+      lastDate: DateTime(2035),
+    );
+
+    if (pickedDate == null || !mounted) return;
+
+    setState(() {
+      _selectedDate = pickedDate;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(_isEditing ? 'Izmeni obavezu' : 'Nova obaveza'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _titleController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Naziv obaveze',
+                prefixIcon: Icon(Icons.edit_outlined),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Unesi naziv obaveze.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCategory,
+              decoration: const InputDecoration(
+                labelText: 'Kategorija',
+                prefixIcon: Icon(Icons.folder_outlined),
+              ),
+              items: widget.categories
+                  .map(
+                    (category) => DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    ),
+                  )
+                  .toList(),//dodaje sve kategorije u padajuci meni
+              onChanged: (category) {
+                if (category == null) return;
+                setState(() {
+                  _selectedCategory = category;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _chooseDate,
+                icon: const Icon(Icons.calendar_month_outlined),
+                label: Text('Rok: ${_formatDate(_selectedDate)}'),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _cancel,
+          child: const Text('Otkaži'),
+        ),
+        FilledButton(
+          onPressed: _save,
+          child: Text(_isEditing ? 'Sačuvaj' : 'Dodaj'),//prikazuje dugme za dodavanje ili cuvanje obaveze, u zavisnosti od toga da li je u pitanju nova ili izmenjena obaveza
+        ),
+      ],
     );
   }
 }
