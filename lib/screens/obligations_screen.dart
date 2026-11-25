@@ -97,18 +97,32 @@ class _ObligationsScreenState extends State<ObligationsScreen> {
   int get _activeCount => _obligations.length - _completedCount; //broji aktivne obaveze
 
   List<_Obligation> get _filteredObligations { //vraca listu obaveza za odgovarajuci filter
+    List<_Obligation> filteredObligations;
+
     switch (_selectedFilter) {
       case _ObligationFilter.active:
-        return _obligations
+        filteredObligations = _obligations
             .where((obligation) => !obligation.isCompleted)
             .toList();
+        break;
       case _ObligationFilter.completed:
-        return _obligations
+        filteredObligations = _obligations
             .where((obligation) => obligation.isCompleted)
             .toList();
+        break;
       case _ObligationFilter.all:
-        return _obligations;
+        filteredObligations = List.of(_obligations);
+        break;
     }
+
+    filteredObligations.sort((first, second) {
+      if (first.isCompleted != second.isCompleted) { 
+        return first.isCompleted ? 1 : -1; //vraca 1 ako je prva obaveza zavrsena, -1 ako nije, tako da zavrsene obaveze idu na kraj liste
+      }
+      return first.dueDate.compareTo(second.dueDate); //sortira obaveze po roku, tako da obaveze sa skorijim rokom dolaze pre onih sa kasnijim rokom
+    });
+
+    return filteredObligations;
   }
 
   void _selectFilter(_ObligationFilter filter) { //menja trenutno izabrani filter i ekran se ponovo renderuje
